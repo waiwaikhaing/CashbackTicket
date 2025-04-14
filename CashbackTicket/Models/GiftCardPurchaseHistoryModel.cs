@@ -47,30 +47,30 @@ namespace CashbackTicket.Models
     
     public class GiftCardDetailInformationView
     {
-        public string Username { get; set; }
-        public string PhoneNumber { get; set; }
+        public string? Username { get; set; }
+        public string? PhoneNumber { get; set; }
         public bool IsGift { get; set; }
         public bool IsUsed { get; set; }
         public DateTime? UsedOn { get; set; }
-        public string ReceiverName { get; set; }
-        public string ReceiverPhoneNo { get; set; }
-        public string PromoCode { get; set; }
-        public string QRPath { get; set; }
+        public string? ReceiverName { get; set; }
+        public string? ReceiverPhoneNo { get; set; }
+        public string? PromoCode { get; set; }
+        public string? QRPath { get; set; }
         public string Title { get; set; }
-        public string Description { get; set; }
-        public string GiftCardNo { get; set; }
+        public string? Description { get; set; }
+        public string? GiftCardNo { get; set; }
         public DateTime ExpiryDate { get; set; }
         public decimal? Discount { get; set; }
         public int? GiftPerUserLimit { get; set; }
         public int? MaxLimitToBuy { get; set; }
         public int Quantity { get; set; }
-        public string Name { get; set; } // Payment method name
+        public string? Name { get; set; } // Payment method name
         public decimal? PaymentDiscount { get; set; }
         public bool? GiftCardActive { get; set; }
         public string? ReceiveUserID { get; set; }
-        public string UserId { get; set; }
+        public string? UserId { get; set; }
         public decimal Amount { get; set; }
-        public string GiftCardId { get; set; }
+        public string? GiftCardId { get; set; }
     }
 }
 

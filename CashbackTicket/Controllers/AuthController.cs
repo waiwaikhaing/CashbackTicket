@@ -1,4 +1,5 @@
-﻿using CashbackTicket.Models;
+﻿using System.Security.Claims;
+using CashbackTicket.Models;
 using CashbackTicket.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -11,10 +12,11 @@ namespace CashbackTicket.Controllers
     public class AuthController : ControllerBase
     {
         private readonly IUserService _userService;
-
-        public AuthController(IUserService userService)
+        private readonly IJwtService _jwtService;
+        public AuthController(IUserService userService, IJwtService jwtService)
         {
             _userService = userService;
+            _jwtService = jwtService;
         }
 
         [HttpPost("register")]
@@ -43,30 +45,45 @@ namespace CashbackTicket.Controllers
             return Ok(result);
         }
 
-        //public async Task<AuthResponse> RefreshToken(string token, string refreshToken)
-        //{
-        //    var principal = GetPrincipalFromExpiredToken(token);
-        //    var username = principal.Identity.Name;
-        //    var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
+        #region refresh token 
+        [HttpPost("RefreshToken")]
+        public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequest request)
+        {
+            if (request is null || string.IsNullOrEmpty(request.AccessToken) || string.IsNullOrEmpty(request.RefreshToken))
+            {
+                return BadRequest("Invalid client request");
+            }
 
-        //    if (user == null || user.RefreshToken != refreshToken || user.TokenExpires <= DateTime.UtcNow)
-        //        return new AuthResponse { Success = false, Message = "Invalid token" };
+            var principal = await _jwtService.GetPrincipalFromExpiredToken(request.AccessToken);
+            var userId = principal.FindFirstValue(ClaimTypes.NameIdentifier);
 
-        //    var newToken = GenerateJwtToken(user);
-        //    var newRefreshToken = GenerateRefreshToken();
+            if (string.IsNullOrEmpty(userId))
+            {
+                return BadRequest("Invalid token");
+            }
 
-        //    user.RefreshToken = newRefreshToken;
-        //    user.TokenExpires = DateTime.UtcNow.AddMinutes(15);
+            var user = await _userService.GetUserByUserID(userId);
+            if (user == null)
+            {
+                return BadRequest("User not found");
+            }
 
-        //    await _context.SaveChangesAsync();
+            if (user.Data == null ||
+                user.Data.UserId != userId ||
+                user.Data.RefreshToken != request.RefreshToken ||
+                user.Data.RefreshTokenExpiryTime <= DateTime.UtcNow
+                )
+            {
+                return BadRequest("Invalid refresh token");
+            }
 
-        //    return new AuthResponse
-        //    {
-        //        Success = true,
-        //        Token = newToken,
-        //        RefreshToken = newRefreshToken
-        //    };
-        //}
+            var newAccessToken = _jwtService.GenerateToken(user.Data);
+            return Ok(new
+            {
+                AccessToken = newAccessToken
+            });
+        }
+        #endregion
 
     }
 }

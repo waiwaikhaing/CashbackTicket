@@ -8,6 +8,7 @@ using System;
 using System.Security.Cryptography;
 using static CashbackTicket.Services.UserService;
 using System.Text;
+using Microsoft.AspNetCore.Mvc;
 
 namespace CashbackTicket.Services
 {
@@ -15,16 +16,19 @@ namespace CashbackTicket.Services
     {
         Task<ServiceResponse> UserRegister(UserRegisterDTO dto);
         Task<TokenResponse> GenerateToken(UserDTO dto);
+        Task<ServiceDataResponse<UserData>> GetUserByUserID(string userId);
     }
 
     public class UserService : IUserService
     {
         private readonly AppDBContext _context;
         private readonly IJwtService _jwtService;
-        public UserService(AppDBContext context, IJwtService jwtService)
+        private readonly IConfiguration _config;
+        public UserService(AppDBContext context, IJwtService jwtService, IConfiguration config)
         {
             _context = context;
             _jwtService = jwtService;
+            _config = config;
         }
 
         public async Task<ServiceResponse> UserRegister(UserRegisterDTO dto)
@@ -92,8 +96,8 @@ namespace CashbackTicket.Services
             {
                 //update token
                 user.CurrentToken = token;
-                user.RefreshToken = Guid.NewGuid().ToString();
-                user.RefreshTokenExpiryTime = DateTime.Now;
+                user.RefreshToken = await _jwtService.GenerateRefreshToken();//Guid.NewGuid().ToString();
+                user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(Convert.ToDouble(_config["Jwt:RefreshTokenExpirationDays"]));
                 var result = await _context.SaveChangesAsync();
             }
 
@@ -105,143 +109,34 @@ namespace CashbackTicket.Services
             };
         }
 
-        //public async Task<AuthResponse> RefreshToken(string token, string refreshToken)
-        //{
-        //    var principal = GetPrincipalFromExpiredToken(token);
-        //    var username = principal.Identity.Name;
-        //    var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
+     
+        public async Task<ServiceDataResponse<UserData>> GetUserByUserID(string userId)
+        {
+            ServiceDataResponse<UserData> response = new ServiceDataResponse<UserData>();
+            try
+            {
+                var result = await _context.Users.FirstOrDefaultAsync(x => x.UserId == userId);
+                if (result != null)
+                {
+                    response.Success = true;
+                    response.Message = "Success";
+                    response.Data = result;
+                }
+                else
+                {
+                    response.Success = false;
+                    response.Message = "No Data";
+                }
+            }
+            catch (Exception ex) { 
 
-        //    if (user == null || user.RefreshToken != refreshToken || user.RefreshTokenExpiryTime <= DateTime.UtcNow)
-        //        return new AuthResponse { Success = false, Message = "Invalid token" };
-
-        //    var newToken = await GenerateToken(user);
-        //    var newRefreshToken = GenerateRefreshToken();
-
-        //    user.RefreshToken = newRefreshToken;
-        //   user.RefreshTokenExpiryTime = DateTime.UtcNow.AddMinutes(15);
-
-        //    await _context.SaveChangesAsync();
-
-        //    return new AuthResponse
-        //    {
-        //        Success = true,
-        //        Token = newToken.Token,
-        //        RefreshToken = newRefreshToken
-        //    };
-        //}
-
-
-        ///////////////////////////////
-        ///
-       
-
-            // ... [previous methods remain the same] ...
-
-            //private ClaimsPrincipal GetPrincipalFromExpiredToken(string token)
-            //{
-            //    var tokenValidationParameters = new TokenValidationParameters
-            //    {
-            //        ValidateAudience = false,
-            //        ValidateIssuer = false,
-            //        ValidateIssuerSigningKey = true,
-            //        IssuerSigningKey = _key,
-            //        ValidateLifetime = false // we want to get claims from expired token
-            //    };
-
-            //    var tokenHandler = new JwtSecurityTokenHandler();
-            //    SecurityToken securityToken;
-            //    var principal = tokenHandler.ValidateToken(token, tokenValidationParameters, out securityToken);
-            //    var jwtSecurityToken = securityToken as JwtSecurityToken;
-
-            //    if (jwtSecurityToken == null || !jwtSecurityToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha512, StringComparison.InvariantCultureIgnoreCase))
-            //        throw new SecurityTokenException("Invalid token");
-
-            //    return principal;
-            //}
-
-            //private string GenerateRefreshToken()
-            //{
-            //    var randomNumber = new byte[32];
-            //    using (var rng = RandomNumberGenerator.Create())
-            //    {
-            //        rng.GetBytes(randomNumber);
-            //        return Convert.ToBase64String(randomNumber);
-            //    }
-            //}
-
-        //    private string GenerateJwtToken(User user)
-        //    {
-        //        var claims = new List<Claim>
-        //{
-        //    new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-        //    new Claim(ClaimTypes.Name, user.Username),
-        //    new Claim(ClaimTypes.Role, user.Role)
-        //};
-
-        //        var creds = new SigningCredentials(_key, SecurityAlgorithms.HmacSha512Signature);
-
-        //        var tokenDescriptor = new SecurityTokenDescriptor
-        //        {
-        //            Subject = new ClaimsIdentity(claims),
-        //            Expires = DateTime.UtcNow.AddMinutes(15),
-        //            SigningCredentials = creds
-        //        };
-
-        //        var tokenHandler = new JwtSecurityTokenHandler();
-        //        var token = tokenHandler.CreateToken(tokenDescriptor);
-
-        //        return tokenHandler.WriteToken(token);
-        //    }
-
-            //private void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt)
-            //{
-            //    using (var hmac = new HMACSHA512())
-            //    {
-            //        passwordSalt = hmac.Key;
-            //        passwordHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(password));
-            //    }
-            //}
-
-            //private bool VerifyPasswordHash(string password, byte[] storedHash, byte[] storedSalt)
-            //{
-            //    using (var hmac = new HMACSHA512(storedSalt))
-            //    {
-            //        var computedHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(password));
-            //        for (int i = 0; i < computedHash.Length; i++)
-            //        {
-            //            if (computedHash[i] != storedHash[i]) return false;
-            //        }
-            //    }
-            //    return true;
-            //}
-
-            //public async Task<AuthResponse> Register(UserDto userDto)
-            //{
-            //    if (await UserExists(userDto.Username))
-            //        return new AuthResponse { Success = false, Message = "Username already exists" };
-
-            //    byte[] passwordHash, passwordSalt;
-            //    CreatePasswordHash(userDto.Password, out passwordHash, out passwordSalt);
-
-            //    var user = new User
-            //    {
-            //        Username = userDto.Username,
-            //        PasswordHash = passwordHash,
-            //        PasswordSalt = passwordSalt,
-            //        Role = "User" // Default role
-            //    };
-
-            //    _context.Users.Add(user);
-            //    await _context.SaveChangesAsync();
-
-            //    return new AuthResponse { Success = true, Message = "User registered successfully" };
-            //}
-
-            //public async Task<bool> UserExists(string username)
-            //{
-            //    return await _context.Users.AnyAsync(x => x.Username == username);
-            //}
-        
-
+            }
+            return response;
+        }
     }
+
+
+
+
+
 }

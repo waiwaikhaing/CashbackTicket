@@ -183,13 +183,13 @@ namespace CashbackTicket.Services
                 var giftCardInfo = await _context.GiftCardDatas.Where(x => x.Active == true
                 && x.GiftCardId == model.GiftCardId).FirstOrDefaultAsync();
 
-                if (buyerList.Count >= giftCardInfo.MaxLimitToBuy)
+                if (giftCardInfo.MaxLimitToBuy > 0 && buyerList.Count >= giftCardInfo.MaxLimitToBuy)
                 {
                     response.Success = false;
                     response.Message = $"Purchase limit exceeded. Maximum {giftCardInfo.MaxLimitToBuy} gift cards can be bought."; ;
                     return response;
                 }
-                if (receiverList.Count >= giftCardInfo.GiftPerUserLimit)
+                if (giftCardInfo.GiftPerUserLimit > 0 &&  receiverList.Count >= giftCardInfo.GiftPerUserLimit)
                 {
                     response.Success = false;
                     response.Message = $"Gift limit exceeded. Maximum {giftCardInfo.GiftPerUserLimit} gift cards can be received per user.";
