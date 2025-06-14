@@ -1,0 +1,9 @@
+bin/
+obj/
+.git/
+.vscode/
+node_modules/
+*.zip
+*.tar
+Dockerfile
+docker-compose.yml

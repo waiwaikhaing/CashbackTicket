@@ -134,6 +134,12 @@ var serviceConfig = new ServiceConfiguration();
 serviceConfig.AddServices(builder.Services);
 builder.Services.AddAutoMapper(typeof(Program).Assembly);
 
+// **IMPORTANT: Configure Kestrel to listen on port 80**
+builder.WebHost.ConfigureKestrel(serverOptions =>
+{
+    serverOptions.ListenAnyIP(80); // Listen on port 80 for HTTP
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -142,15 +148,15 @@ var app = builder.Build();
 //    app.MapOpenApi();
 //}
 // Enable Swagger only in development (optional)
-if (app.Environment.IsDevelopment())
-{
+//if (app.Environment.IsDevelopment())
+//{
     app.UseSwagger();
     app.UseSwaggerUI(c =>
     {
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "My .NET 9 API v1");
         c.RoutePrefix = string.Empty; // Optional: Swagger at root URL
     });
-}
+//}
 
 app.UseHttpsRedirection();
 app.UseAuthentication();//jwt
